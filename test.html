@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>QR Attendance PWA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#008c3a" />
+
+  <!-- html5-qrcode CDN -->
+  <script src="https://unpkg.com/html5-qrcode" defer></script>
+
+  <style>
+    :root {
+      --primary: #008c3a;   /* Egyptian Food Bank green-like */
+      --primary-dark: #00692b;
+      --accent: #00b34a;
+      --bg: #f5f9f6;
+      --text: #113322;
+      --danger: #c0392b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      min-height: 100vh;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 480px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .header {
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 1.3rem;
+      margin: 0 0 4px;
+      color: var(--primary-dark);
+    }
+
+    .header p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #567;
+    }
+
+    label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+      display: block;
+      color: var(--primary-dark);
+    }
+
+    select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #cfd8dc;
+      font-size: 1rem;
+      background: #fff;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 999px;
+      border: none;
+      font-size: 1.05rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: background 0.15s ease, transform 0.05s ease, box-shadow 0.15s ease;
+      outline: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(0, 140, 58, 0.4);
+    }
+
+    .btn-primary:active {
+      transform: translateY(1px);
+      box-shadow: 0 1px 3px rgba(0, 140, 58, 0.5);
+      background: var(--primary-dark);
+    }
+
+    .btn-secondary {
+      background: #ffffff;
+      color: var(--primary-dark);
+      border: 1px solid var(--primary);
+    }
+
+    .btn-secondary:active {
+      transform: translateY(1px);
+      background: #f0faf4;
+    }
+
+    .btn[disabled] {
+      cursor: not-allowed;
+      opacity: 0.6;
+      box-shadow: none;
+    }
+
+    #reader {
+      width: 100%;
+      min-height: 260px;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #000;
+      margin-top: 10px;
+    }
+
+    .status {
+      font-size: 0.9rem;
+      margin-top: 8px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: #eef7f0;
+      border-left: 4px solid var(--primary);
+      color: #345;
+      min-height: 40px;
+    }
+
+    .status.error {
+      background: #fdecea;
+      border-left-color: var(--danger);
+      color: #772b20;
+    }
+
+    .status.success {
+      background: #e9f8ef;
+      border-left-color: var(--accent);
+      color: #1e5f33;
+    }
+
+    .badge-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .offline-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: #fff3cd;
+      color: #8a6d1b;
+      font-size: 0.85rem;
+      border: 1px solid #ffecb5;
+      white-space: nowrap;
+    }
+
+    .offline-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #f39c12;
+    }
+
+    small {
+      font-size: 0.78rem;
+      color: #789;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="card header">
+      <h1>QR Attendance Scanner</h1>
+      <p>Egyptian Food Bank – Scan & Log Attendance</p>
+    </div>
+
+    <div class="card">
+      <label for="activitySelect">Select Activity</label>
+      <select id="activitySelect">
+        <option value="">-- Choose Activity --</option>
+        <option value="Registration">Registration</option>
+        <option value="Breakfast">Breakfast</option>
+        <option value="Lunch">Lunch</option>
+        <option value="Workshop A">Workshop A</option>
+        <option value="Workshop B">Workshop B</option>
+        <option value="Workshop C">Workshop C</option>
+        <option value="Plenary Session">Plenary Session</option>
+        <option value="Networking">Networking</option>
+        <option value="Closing Ceremony">Closing Ceremony</option>
+        <option value="Volunteer Briefing">Volunteer Briefing</option>
+      </select>
+      <small>You must select an activity before scanning.</small>
+
+      <button id="toggleScanBtn" class="btn btn-primary" disabled>
+        Start Scanning
+      </button>
+
+      <div id="reader"></div>
+
+      <div id="status" class="status">
+        Ready. Select an activity and start scanning.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="badge-row">
+        <div class="offline-badge" id="offlineBadge">
+          <span class="offline-dot"></span>
+          <span>Stored Offline: <strong id="offlineCount">0</strong> records</span>
+        </div>
+        <button id="syncBtn" class="btn btn-secondary" disabled>
+          Sync Now
+        </button>
+      </div>
+      <small>
+        When offline, scans are saved automatically and can be synced later when you are back online.
+      </small>
+    </div>
+  </div>
+
+  <script>
+    // ====== CONFIG ======
+    const APPS_SCRIPT_URL = "Yhttps://script.google.com/macros/s/AKfycby8nwSFa0QaKXSjd9xKTTnyGiliyrmlt7xg5hPq0TvhvhhLsT_TtHD_tiZMf_G8r-Z6/exec";
+    const OFFLINE_KEY = "qr_attendance_offline_v1";
+
+    // ====== STATE ======
+    let html5QrCode = null;
+    let isScanning = false;
+    let lastScannedText = null;
+
+    // Simple embedded beep (0.1s 1kHz WAV, base64)
+    const beepAudio = new Audio(
+      "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAAA"
+    );
+    // That data URI is intentionally small; replace with your own if desired.
+
+    // ====== DOM ELEMENTS ======
+    const activitySelect = document.getElementById("activitySelect");
+    const toggleScanBtn = document.getElementById("toggleScanBtn");
+    const statusEl = document.getElementById("status");
+    const offlineCountEl = document.getElementById("offlineCount");
+    const syncBtn = document.getElementById("syncBtn");
+
+    // ====== UTILITIES ======
+    function setStatus(msg, type = "") {
+      statusEl.textContent = msg;
+      statusEl.classList.remove("error", "success");
+      if (type) statusEl.classList.add(type);
+    }
+
+    function loadOfflineRecords() {
+      try {
+        const raw = localStorage.getItem(OFFLINE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        console.error("Failed to parse offline records", e);
+        return [];
+      }
+    }
+
+    function saveOfflineRecords(records) {
+      localStorage.setItem(OFFLINE_KEY, JSON.stringify(records));
+      updateOfflineUI();
+    }
+
+    function addOfflineRecord(record) {
+      const records = loadOfflineRecords();
+      records.push(record);
+      saveOfflineRecords(records);
+    }
+
+    function updateOfflineUI() {
+      const records = loadOfflineRecords();
+      const count = records.length;
+      offlineCountEl.textContent = count;
+      syncBtn.disabled = count === 0 || !navigator.onLine;
+    }
+
+    function getActivity() {
+      return activitySelect.value.trim();
+    }
+
+    function playBeep() {
+      // Restart if still playing
+      try {
+        beepAudio.currentTime = 0;
+        beepAudio.play().catch(() => {});
+      } catch (e) {
+        console.warn("Beep failed", e);
+      }
+    }
+
+    function nowIso() {
+      return new Date().toISOString();
+    }
+
+    // ====== SCAN HANDLERS ======
+    async function startScanner() {
+      if (isScanning) return;
+      const activity = getActivity();
+      if (!activity) {
+        setStatus("Please select an activity before starting the scanner.", "error");
+        return;
+      }
+
+      try {
+        if (!html5QrCode) {
+          html5QrCode = new Html5Qrcode("reader");
+        }
+        const config = {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          rememberLastUsedCamera: true
+        };
+
+        const cameraConfig = { facingMode: "environment" };
+
+        await html5QrCode.start(
+          cameraConfig,
+          config,
+          onScanSuccess,
+          onScanFailure
+        );
+
+        isScanning = true;
+        toggleScanBtn.textContent = "Stop Scanning";
+        setStatus("Scanning... Point the camera at a QR code.");
+      } catch (err) {
+        console.error(err);
+        setStatus("Unable to start camera. Please allow camera access or try another device.", "error");
+      }
+    }
+
+    async function stopScanner() {
+      if (!isScanning || !html5QrCode) return;
+      try {
+        await html5QrCode.stop();
+        isScanning = false;
+        toggleScanBtn.textContent = "Start Scanning";
+        setStatus("Scanner stopped. You can start again at any time.");
+      } catch (err) {
+        console.error(err);
+        setStatus("Error stopping scanner.", "error");
+      }
+    }
+
+    function onScanFailure(error) {
+      // Ignore continuous scan errors to keep UI calm
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
+      // Debounce same text scanned repeatedly in short time
+      if (decodedText === lastScannedText) return;
+      lastScannedText = decodedText;
+      setTimeout(() => { lastScannedText = null; }, 1500);
+
+      playBeep();
+
+      const activity = getActivity();
+      if (!activity) {
+        setStatus("Scan ignored because no activity is selected.", "error");
+        return;
+      }
+
+      const record = {
+        qrCode: decodedText,
+        activity: activity,
+        timestamp: nowIso()
+      };
+
+      handleScanRecord(record);
+    }
+
+    async function handleScanRecord(record) {
+      if (navigator.onLine) {
+        setStatus("Sending attendance record...", "");
+        try {
+          const res = await fetch(APPS_SCRIPT_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(record)
+          });
+
+          if (!res.ok) {
+            throw new Error("Network response was not OK");
+          }
+
+          const data = await res.json().catch(() => ({}));
+
+          if (data && data.success) {
+            setStatus("Attendance recorded successfully.", "success");
+          } else if (data && data.message) {
+            setStatus(data.message, "error");
+          } else {
+            setStatus("Unknown response from server.", "error");
+          }
+        } catch (err) {
+          console.error("Online send failed, saving offline instead", err);
+          addOfflineRecord(record);
+          setStatus("Network issue. Record saved offline.", "error");
+        }
+      } else {
+        // Offline: auto-save without asking user
+        addOfflineRecord(record);
+        setStatus("Offline detected. Record saved locally.", "error");
+      }
+    }
+
+    // ====== SYNC OFFLINE ======
+    async function syncOffline() {
+      const records = loadOfflineRecords();
+      if (!navigator.onLine) {
+        setStatus("You are offline. Connect to the internet and try syncing again.", "error");
+        updateOfflineUI();
+        return;
+      }
+      if (records.length === 0) {
+        setStatus("No offline records to sync.", "");
+        updateOfflineUI();
+        return;
+      }
+
+      setStatus(`Syncing ${records.length} offline record(s)...`, "");
+      syncBtn.disabled = true;
+
+      const remaining = [];
+
+      for (const record of records) {
+        try {
+          const res = await fetch(APPS_SCRIPT_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(record)
+          });
+
+          if (!res.ok) throw new Error("Network response not OK");
+
+          const data = await res.json().catch(() => ({}));
+
+          if (!(data && data.success)) {
+            // If server rejects (e.g., duplicate), we drop it from offline
+            console.warn("Record rejected by server:", data);
+          }
+        } catch (err) {
+          console.error("Failed to sync record, keeping offline", err);
+          remaining.push(record);
+        }
+      }
+
+      saveOfflineRecords(remaining);
+      if (remaining.length === 0) {
+        setStatus("All offline records synced successfully.", "success");
+      } else {
+        setStatus(`${remaining.length} record(s) could not be synced and remain offline.`, "error");
+      }
+    }
+
+    // ====== EVENT LISTENERS ======
+    activitySelect.addEventListener("change", () => {
+      const hasActivity = !!getActivity();
+      toggleScanBtn.disabled = !hasActivity;
+      if (!hasActivity && isScanning) {
+        stopScanner();
+      }
+    });
+
+    toggleScanBtn.addEventListener("click", () => {
+      if (isScanning) {
+        stopScanner();
+      } else {
+        startScanner();
+      }
+    });
+
+    syncBtn.addEventListener("click", () => {
+      syncOffline();
+    });
+
+    window.addEventListener("online", () => {
+      updateOfflineUI();
+      setStatus("You are back online. You can sync offline records.", "success");
+    });
+
+    window.addEventListener("offline", () => {
+      updateOfflineUI();
+      setStatus("You are offline. Scans will be stored locally.", "error");
+    });
+
+    // ====== PWA: Manifest + Service Worker (inline, single-file) ======
+    function registerInlineManifest() {
+      const manifest = {
+        name: "QR Attendance Scanner",
+        short_name: "QR Attendance",
+        start_url: ".",
+        display: "standalone",
+        background_color: "#f5f9f6",
+        theme_color: "#008c3a",
+        icons: [
+          {
+            src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23008c3a'/%3E%3Ctext x='50' y='55' font-size='40' text-anchor='middle' fill='white' font-family='sans-serif'%3EQR%3C/text%3E%3C/svg%3E",
+            sizes: "192x192",
+            type: "image/svg+xml"
+          }
+        ]
+      };
+
+      const blob = new Blob([JSON.stringify(manifest)], { type: "application/json" });
+      const manifestURL = URL.createObjectURL(blob);
+
+      const link = document.createElement("link");
+      link.rel = "manifest";
+      link.href = manifestURL;
+      document.head.appendChild(link);
+    }
+
+    function registerInlineServiceWorker() {
+      if (!("serviceWorker" in navigator)) return;
+
+      const swCode = `
+        const CACHE_NAME = "qr-attendance-cache-v1";
+        const toCache = [
+          self.registration.scope
+        ];
+
+        self.addEventListener("install", (event) => {
+          event.waitUntil(
+            caches.open(CACHE_NAME).then((cache) => cache.addAll(toCache))
+          );
+          self.skipWaiting();
+        });
+
+        self.addEventListener("activate", (event) => {
+          event.waitUntil(
+            caches.keys().then((keys) =>
+              Promise.all(
+                keys
+                  .filter((key) => key !== CACHE_NAME)
+                  .map((key) => caches.delete(key))
+              )
+            )
+          );
+          self.clients.claim();
+        });
+
+        self.addEventListener("fetch", (event) => {
+          const req = event.request;
+          if (req.method !== "GET") return;
+
+          event.respondWith(
+            caches.match(req).then((cached) => {
+              const fetchPromise = fetch(req)
+                .then((networkRes) => {
+                  if (!networkRes || networkRes.status !== 200 || networkRes.type !== "basic") {
+                    return networkRes;
+                  }
+                  const resClone = networkRes.clone();
+                  caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
+                  return networkRes;
+                })
+                .catch(() => cached || Promise.reject("no-match"));
+
+              return cached || fetchPromise;
+            })
+          );
+        });
+      `;
+
+      const blob = new Blob([swCode], { type: "text/javascript" });
+      const swUrl = URL.createObjectURL(blob);
+
+      navigator.serviceWorker
+        .register(swUrl)
+        .then(() => {
+          console.log("Inline service worker registered");
+        })
+        .catch((err) => {
+          console.error("Service worker registration failed", err);
+        });
+    }
+
+    // ====== INIT ======
+    document.addEventListener("DOMContentLoaded", () => {
+      updateOfflineUI();
+      registerInlineManifest();
+      registerInlineServiceWorker();
+      if (!navigator.onLine) {
+        setStatus("You are offline. Scans will be stored locally.", "error");
+      }
+    });
+  </script>
+</body>
+</html>
